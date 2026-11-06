@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # builds everything, examples included, and runs the unit tests; the end to
+  # end tests (--ignored) download Whisper checkpoints, so CI skips them
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest # Metal
+          - os: ubuntu-latest # CPU
+          - os: ubuntu-24.04-arm # CPU
+          - os: windows-latest # CPU
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --all-targets
+      - run: cargo test --release
+
+  # the oldest Rust the manifest accepts (rust-version)
+  msrv:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@1.88
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --all-targets

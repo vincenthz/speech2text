@@ -1,0 +1,36 @@
+[package]
+name = "speech2text"
+description = "Microphone capture and English Whisper speech recognition on candle"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/vincenthz/speech2text"
+readme = "README.md"
+keywords = ["whisper", "speech-recognition", "transcription", "candle", "microphone"]
+categories = ["multimedia::audio", "science"]
+exclude = ["/.github"]
+
+[dependencies]
+anyhow = "1"
+candle-core = "0.9"
+candle-nn = "0.9"
+cpal = "0.18"
+hf-hub = { version = "0.4", default-features = false, features = ["ureq"] }
+rustfft = "6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokenizers = { version = "0.22", default-features = false, features = ["fancy-regex"] }
+
+# Metal is Apple-only, and features cannot be enabled per target: request
+# candle's Metal backend on macOS alone, so other platforms build for the CPU
+[target.'cfg(target_os = "macos")'.dependencies]
+candle-core = { version = "0.9", features = ["metal"] }
+candle-nn = { version = "0.9", features = ["metal"] }
+
+[dev-dependencies]
+hound = "3"
+
+[profile.dev.package."*"]
+# unoptimized candle and FFT code make Whisper unusably slow in debug builds
+opt-level = 3

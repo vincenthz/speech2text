@@ -28,6 +28,12 @@ tokenizers = { version = "0.22", default-features = false, features = ["fancy-re
 candle-core = { version = "0.9", features = ["metal"] }
 candle-nn = { version = "0.9", features = ["metal"] }
 
+[features]
+# NVIDIA GPUs through candle's CUDA backend. Needs the CUDA toolkit (nvcc) at
+# build time; the kernels are compiled for the GPU found by nvidia-smi, or for
+# the compute capability in $CUDA_COMPUTE_CAP
+cuda = ["candle-core/cuda", "candle-nn/cuda"]
+
 [dev-dependencies]
 hound = "3"
 

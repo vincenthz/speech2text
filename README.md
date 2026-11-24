@@ -2,8 +2,8 @@
 
 On-device English speech recognition in Rust: microphone capture with
 [cpal](https://github.com/RustAudio/cpal) and OpenAI's Whisper running on
-[candle](https://github.com/huggingface/candle). It uses the Metal GPU on macOS
-and the CPU elsewhere. The Whisper encoder-decoder, the log-mel front end
+[candle](https://github.com/huggingface/candle). It uses the Metal GPU on macOS,
+an NVIDIA GPU when built with the `cuda` feature, and the CPU otherwise. The Whisper encoder-decoder, the log-mel front end
 (matching Hugging Face's `WhisperFeatureExtractor`) and the resampler are
 written directly in this crate.
 
@@ -22,7 +22,9 @@ Remind me to buy milk tomorrow morning, it is important.
 ```
 
 The numbers above are from an M2 Max. The first Metal warm-up compiles the
-kernels, so it's slow once and fast after that.
+kernels, so it's slow once and fast after that. The same goes for CUDA, whose
+driver caches the compiled kernels between runs: on an RTX 5080 the first
+warm-up takes 15 s, later ones 0.3 s, and the clip transcribes in 0.11 s.
 
 ## Checkpoints
 
@@ -75,11 +77,34 @@ Rust 1.88 or later. On Linux, cpal needs the ALSA headers
 (`apt install libasound2-dev`). Dependencies are optimized in debug builds too
 (`[profile.dev.package."*"]`), since unoptimized candle is unusably slow.
 
+### CUDA
+
+```sh
+cargo run --release --features cuda --example transcribe -- tests/data/buy_milk.wav
+```
+
+The `cuda` feature needs the CUDA toolkit (`nvcc`) at build time; the kernels
+are compiled for the GPU that `nvidia-smi` reports, or for `$CUDA_COMPUTE_CAP`
+(e.g. `120`) on a machine without one. `default_device()` then picks the first
+CUDA GPU, falling back to the CPU when none can be opened. Things that can get
+in the way:
+
+- The driver must be at least as new as the toolkit. Kernels built by a newer
+  `nvcc` than the driver's CUDA version (the one `nvidia-smi` prints) fail at
+  warm-up with `CUDA_ERROR_UNSUPPORTED_PTX_VERSION`.
+- cudarc only accepts toolkit versions it knows. For a newer one it stops with
+  `Unsupported cuda toolkit version`; set `CUDARC_CUDA_VERSION` to the newest
+  it supports, e.g. `13040` for 13.4.
+- On Windows, build from a Visual Studio developer prompt (or after running
+  `vcvars64.bat`) so `nvcc` finds `cl.exe`. CUDA 13 also needs the conforming
+  preprocessor: `set NVCC_APPEND_FLAGS=-Xcompiler /Zc:preprocessor`.
+
 ## Tests
 
 ```sh
 cargo test                        # unit tests
 cargo test --release -- --ignored # end to end, downloads both checkpoints (~2.6 GB)
+cargo test --release --features cuda -- --ignored # the same on an NVIDIA GPU
 ```
 
 ## License

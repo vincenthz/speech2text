@@ -292,8 +292,13 @@ fn is_hallucination(text: &str) -> bool {
     words.is_empty() || SILENCE_HALLUCINATIONS.contains(&words.as_str())
 }
 
-/// The Metal GPU on macOS when one is available, else the CPU.
+/// The first CUDA GPU when built with the `cuda` feature and one is
+/// available, else the Metal GPU on macOS when one is available, else the CPU.
 pub fn default_device() -> Device {
+    #[cfg(feature = "cuda")]
+    if let Ok(device) = Device::new_cuda(0) {
+        return device;
+    }
     #[cfg(target_os = "macos")]
     if let Ok(device) = Device::new_metal(0) {
         return device;

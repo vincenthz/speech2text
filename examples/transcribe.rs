@@ -2,6 +2,7 @@
 //! (or freshly downloaded) Whisper checkpoint.
 //!
 //! cargo run --release --example transcribe -- [--checkpoint small] [--cpu] <file.wav | --record SECONDS>
+//! (add `--features cuda` to run on an NVIDIA GPU)
 
 use std::{
     io::Write,
